@@ -15,7 +15,7 @@ const userSchema=new mongoose.Schema({
         unique:true
     },
     resume:{type:String},
-    Image:{
+    image:{
         type:String,
         required:true
     }
