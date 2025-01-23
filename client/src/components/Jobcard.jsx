@@ -7,10 +7,12 @@ function Jobcard({job}) {
 const navigate=useNavigate()
 
 
+
+
   return (
     <div className='border p-6 shadow rounded'>
       <div className='flex justify-center items-center '>
-        <img src={assets.company_icon} className='h-8' alt="" />
+        <img src={job.companyId.image} className='rounded-md h-8' alt="" />
       </div>
       <h4 className='font-medium text-xl mt-2'>{job.title}</h4>
       <div className='flex justify-between items-center  mt-2'>

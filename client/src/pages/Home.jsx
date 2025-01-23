@@ -8,7 +8,10 @@ import Footer from '../components/Footer'
 function Home() {
   return (
     <div>
+      <div className='p-1'>
       <Navbar/>
+
+      </div>
       <Hero/>
       <JobList/>
       <Download/>

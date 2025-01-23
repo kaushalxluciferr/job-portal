@@ -1,12 +1,55 @@
-import React, { useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import Navbar from '../components/Navbar'
 import { assets, jobsApplied } from '../assets/assets'
 import moment from 'moment'
 import Footer from '../components/Footer'
+import { AppContext } from '../context/AppContext'
+import { toast } from 'react-toastify'
+import axios from 'axios'
 function Application() {
 
 const [isEdit,setisEdit]=useState(false)
-const [resume,setresume]=useState("")
+const [resume,setresume]=useState()
+
+
+const {userData,user,backendUrl,userApplication,fetchDetail,fetchApplications}=useContext(AppContext)
+
+
+const updateResume=async()=>{
+  try{
+    const userId=localStorage.getItem('userId')
+    const formData=new FormData()
+    formData.append('resume',resume)
+    formData.append('userId',userId)
+    console.log(userId);
+    
+    const {data}=await axios.post(backendUrl+'/api/v1/update-resume',formData)
+    console.log(data);
+    
+   if(data.success)
+   {
+    toast.success(data.message)
+    await fetchDetail();
+   }else{
+    toast.error(data.message)
+   }
+
+  }catch(error)
+  {
+    toast.error(error.message)
+  }
+  setresume(null)
+  setisEdit(false)
+}
+
+
+useEffect(()=>{
+if(user)
+{
+  fetchApplications()
+}
+},[user])
+
   return (
     <>
 <Navbar/>
@@ -15,17 +58,18 @@ const [resume,setresume]=useState("")
   <h2 className='text-xl font-semibold'>Your Resume</h2>
   <div className='flex gap-2 mb-6px mt-3 '>
     {
-      isEdit?<>
+      isEdit||userData&&userData.resume===""
+      ?<>
       <label className='flex items-center' htmlFor="resumeUpload">
-      <p className=' bg-blue-100 text-blue-600 px-4 py-2 rounded-lg '>Select Resume</p>
-      <input hidden type="file" id='resumeUpload' onChange={e=>setresume(e.target.files[0])} accept='application' />
+      <p className=' bg-blue-100 text-blue-600 px-4 py-2 rounded-lg '>{resume?resume.name:"select resume"}</p>
+      <input hidden type="file" id='resumeUpload' onChange={e=>setresume(e.target.files[0])}  accept='application' />
 
 <img src={assets.profile_upload_icon} className='ml-2' alt="" />
       </label>
-      <button onClick={e=>setisEdit(false)} className='bg-black text-white border  rounded-lg px-4 py-2'>Save</button>
+      <button onClick={updateResume} className='bg-black text-white border  rounded-lg px-4 py-2'>Save</button>
       
       </>: <div className='flex gap-3'>
-        <a href="" className='bg-blue-100 text-blue-600 px-4 py-2 rounded-lg'>Resume</a>
+        <a target='_blank' href={userData.resume} className='bg-blue-100 text-blue-600 px-4 py-2 rounded-lg'>Resume</a>
         <button onClick={()=>setisEdit(true)} className='text-gray-500 border border-gray-300 rounded-lg px-4 py-2'>Edit</button>
       </div>
     }
@@ -45,16 +89,16 @@ const [resume,setresume]=useState("")
     </tr>
   </thead>
   <tbody>
-    {jobsApplied.map((item,index)=>true?(
+    {userApplication.map((item,index)=>true?(
       <tr key={index}>
         <td className='py-3 px-4 flex items-center gap-2 border-b'>
-          <img src={item.logo} className='w-8 h-8' alt="" />
-          {item.company}
+          <img src={item.companyId.image} className='w-8 h-8' alt="" />
+          {item.companyId.name}
         </td>
-        <td className='py-2 px-4 border-b'>{item.title}</td>
-        <td  className='py-2 px-4 border-b max-sm:hidden'>{item.location}</td>
+        <td className='py-2 px-4 border-b'>{item.jobId.title}</td>
+        <td  className='py-2 px-4 border-b max-sm:hidden'>{item.jobId.location}</td>
         <td  className='py-2 px-4 border-b max-sm:hidden'>{moment(item.date).format('MMMM DD, YYYY')}</td>
-        <td  className='py-2 px-4 border-b'><span className='bg-blue-400 px-2 py-2 rounded-lg'>{item.status}</span></td>
+        <td  className='py-2 px-4 border-b'><span className={`px-2 py-2 rounded-lg ${item.status==='pending'?'bg-blue-400':item.status==="Accepted"?'bg-green-400':'bg-rose-400'}`}>{item.status}</span></td>
       </tr>
     ):(null))}
   </tbody>

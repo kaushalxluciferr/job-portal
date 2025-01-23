@@ -1,33 +1,84 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { AppContext } from '../context/AppContext'
 import SetLoading from '../components/SetLoading'
 import Navbar from '../components/Navbar'
-import { assets } from '../assets/assets'
+import { assets, jobsData } from '../assets/assets'
 import moment from 'moment'
 import Jobcard from '../components/Jobcard'
 import Footer from '../components/Footer'
+import axios from 'axios'
+import { toast } from 'react-toastify'
 function ApplyJob() {
 
-  const{jobs}=useContext(AppContext)
+  const navigate=useNavigate() 
+  const{jobs,backendUrl,userApplication,user,resume,name}=useContext(AppContext)
   const {id}=useParams()
+  
+  const [jobData,setjobData]=useState(null)
+  
 
-const [jobData,setjobData]=useState(null)
-
+// get single job info
 const getJobs=async()=>{
-const data=jobs.filter(job=>job._id===id)
-if(data.length!==0)
+try{
+const {data}=await axios.get(backendUrl+`/api/jobs/${id}`)
+if(data.success)
 {
-  setjobData(data[0])
+  setjobData(data.job)
 }
-
+else
+{
+  toast.error(data.message)
+}
+}catch(error)
+{
+toast.error(error.message)
+}
 }
 
 useEffect(()=>{
-  if(jobs.length>0) {
+ 
     getJobs()
+},[id])
+
+
+
+
+const applyJobHandle=async()=>{
+  try{
+   if(!user)
+   {
+    navigate('/')
+    return toast.error('login first to apply')
+   }
+
+    if(!resume)
+    {
+      navigate('/')
+      return toast.error("Upload resume first")
+    }
+
+    const userId=localStorage.getItem('userId')
+    
+    const {data}=await axios.post(backendUrl+'/api/v1/apply',{userId,jobId:jobData._id})
+    console.log(data);
+    
+if(data.success)
+{
+  toast.success(data.message)
+}
+else{
+  toast.error(data.message)
+}
+
+  }catch(error)
+  {
+toast.error(error.response.data.message)
   }
-},[id,jobs])
+}
+
+
+
 
 
   return jobData?(
@@ -61,7 +112,7 @@ useEffect(()=>{
       </div>
     </div>
     <div className='flex flex-col justify-center text-end text-sm max-md:max-auto max-md:text-center'>
-      <button className='bg-black p-2 px-2 text-white text-[16px] rounded-md'>Apply Now</button>
+      <button className='bg-black p-2 px-2 text-white text-[16px] rounded-md' onClick={()=>applyJobHandle()}>Apply Now</button>
       <p className='mt-4 font-medium'>Posted {moment(jobData.date).fromNow()} </p>
     </div>
   </div>
@@ -72,12 +123,17 @@ useEffect(()=>{
     <h2 className='font-bold text-2xl mb-4 '>Job Description</h2>
     <div  dangerouslySetInnerHTML={{__html:jobData.description}}>
     </div>
-<button className='bg-black mt-4 p-2 px-2 text-white text-[16px] rounded-md'>Apply Now</button>
+<button className='bg-black mt-4 p-2 px-2 text-white text-[16px] rounded-md' onClick={()=>applyJobHandle()}>Apply Now</button>
   </div>
   {/* more jobs display */}
   <div className='w-full lg:w-1/3 mt-8 lg:mt-0 lg:;-8 space-y-5 '>
 <h2 className='font-bold ml-10 text-xl'>More Jobs From {jobData.companyId.name}</h2>
-  {jobs.filter(job=>job._id!==jobData._id && job.companyId._id===jobData.companyId._id ).filter(job=>true).slice(0,4).map((job,index)=>
+  {jobs.filter(job=>job._id!==jobData._id && job.companyId._id===jobData.companyId._id ).filter(job=>{
+    // displaying non applied jobs only
+    const appliedJobsId=new Set(userApplication.map(app=>app.jobId&&app.jobId._id))
+    // return true if user have not applied fro the job
+    return !appliedJobsId.has(job._id)
+  }).slice(0,4).map((job,index)=>
   <Jobcard key={index} job={job} />
   )}
   </div>

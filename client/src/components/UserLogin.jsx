@@ -1,14 +1,16 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { assets } from '../assets/assets'
 import { AppContext } from '../context/AppContext'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import axios from 'axios'
-import { useNavigate } from 'react-router-dom'
 
-function AdminLogin() {
+
+function UserLogin() {
 const [state,setstate]=useState('login')
+const {backendUrl}=useContext(AppContext)
 
-const {setshowRecruiterLogin,backendUrl,setcompanytoken,setcompanyData}=useContext(AppContext)
+
 const navigate=useNavigate()
 
 const [name,setname]=useState('')
@@ -16,63 +18,70 @@ const [password,setpassword]=useState('')
 const [email,setemail]=useState('')
 
 const [image,setimage]=useState(false)
+
 const [textSubmit,settextSubmit]=useState(false)
 
 
-const handlesubmit= async(e)=>{
-e.preventDefault()
+const handlesubmit = async (e) => {
+    e.preventDefault();
 
-if(state=='signup'&&!textSubmit)
-{
-return settextSubmit(true)
-}
-try{
-
-  if(state==='login')
+    if(state==='login')
     {
-      const {data}=await axios.post(backendUrl+'/api/company/login',{email,password})
-      if(data.success)
+        const formData = new FormData();
+formData.append('email', email);
+formData.append('password', password);
+        try{
+const  response=await axios.post(backendUrl + '/api/v1/login',formData,{headers:{
+   'Content-Type': 'application/json'
+}})
+if(response.data.success)
+{
+    localStorage.setItem('userId',response.data.userId)
+    navigate('/')   
+    toast.success("login sucessfully")
+}
+
+        }catch(error)
         {
-          setcompanyData(data.company)  
-          setcompanytoken(data.token)
-          localStorage.setItem('companyToken',data.token)
-          setshowRecruiterLogin(false)
-          navigate('/dashboard')
-          toast.success("login SucessFull")
+            toast.error(error.message)
         }
-      else{
-        toast.error(data.message)
+    }
+  
+    if (state === 'signup' && !textSubmit) {
+      settextSubmit(true);
+      return;
+    }
+  
+    if (state === 'signup' && textSubmit) {
+      const formdata = new FormData();
+      formdata.append('email', email);
+      formdata.append('name', name);
+      formdata.append('password', password);
+      if (image) {
+        formdata.append('image', image);
+      } else {
+        return toast.error('Select an image');
+      }
+  
+      try {
+        const response = await axios.post(backendUrl + `/api/v1/create`, formdata, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+        if(response.data.success)
+        {
+            toast.success("signup sucessfully");
+            setstate('login')
+            setemail('')
+            setpassword('')
+        }
+      } catch (error) {
+        toast.error(error.response?.data?.message || 'Something went wrong!');
       }
     }
-    else{
-      const formData=new FormData()
-     formData.append('name',name)
-     formData.append('email',email)
-     formData.append('password',password)
-     formData.append('image',image)
-
-     const {data}=await axios.post(backendUrl+'/api/company/register',formData)
-     if(data.success)
-     {
-      setcompanyData(data.company)  
-      setcompanytoken(data.token)
-      localStorage.setItem('companyToken',data.token)
-      setshowRecruiterLogin(false)
-      navigate('/dashboard')
-      toast.success("SignUp SucessFull")
-     }
-     else{
-      toast.error(data.message)
-     }
-    }
-    }catch(error)
-    {
-      toast.error(error.message)
-    }
-      
-
-}
-
+  };
+  
 useEffect(()=>{
   
     document.body.style.overflow="hidden"
@@ -81,11 +90,13 @@ useEffect(()=>{
  }
 },[])
 
+
+
   return (
     <div className='absolute top-0 left-0 right-0 bottom-0 z-10 backdrop-blur-sm bg-black/30 flex justify-center items-center '>
         <form onSubmit={handlesubmit}  className='relative bg-white p-10 rounded-md'>
-            <h1 className='text-xl text-center font-medium'>Recruiter {state}</h1>
-               <p className='mt-2 text-sm text-gray-700'>Welcome back pleasery veryfy yourself to continue</p>
+            <h1 className='text-xl text-center font-medium'>{state} Page</h1>
+               <p className='mt-2 text-sm text-gray-700'>Welcome back please verify yourself to continue</p>
 
                {
                 state==='signup' &&textSubmit  ?<>
@@ -95,13 +106,13 @@ useEffect(()=>{
 <input onChange={e=>setimage(e.target.files[0])} type="file" id='image' hidden />
 
                   </label>
-                  <p className='font-bold text-sm'>Upload company <br />logo</p>
+                  <p className='font-bold text-sm'>Upload Your <br />Profile</p>
                  </div>
                 </>:
  <>
  {state!=='login'&&(<div className='border mt-2 px-4 py-2 flex items-center gap-2 rounded-3xl'>
  <img src={assets.person_icon} alt="" />
- <input className='p-1 outline-none font-medium' type="text" placeholder='Company Nmae' value={name} onChange={(e)=>setname(e.target.value)} required   />
+ <input className='p-1 outline-none font-medium' type="text" placeholder='Enter Your name' value={name} onChange={(e)=>setname(e.target.value)} required   />
  </div>)}
  
  <div className='border mt-2 px-4 py-2 flex items-center gap-2 rounded-3xl'>
@@ -119,11 +130,11 @@ useEffect(()=>{
                <p className='text-gray-500 mt-4'>{state==='login'?'Dont have Account':'Already Have account'} <span className='text-red-400 cursor-pointer' onClick={()=>state==='login'? setstate('signup'):setstate('login')} >{state==='login'?"signup":"login "} here</span></p>
 
 
-               <img onClick={()=>setshowRecruiterLogin(false)}  src={assets.cross_icon} className='absolute top-5 right-5 cursor-pointer' alt="" />
+               <img onClick={()=>navigate('/')}  src={assets.cross_icon} className='absolute top-5 right-5 cursor-pointer' alt="" />
         </form>
       
     </div>
   )
 }
 
-export default AdminLogin
+export default UserLogin
